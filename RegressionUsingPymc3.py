@@ -46,7 +46,7 @@ class GenerateDataAndFitModel:
             # Define the priors on each parameter:
             m = pm.Uniform("m", lower=-5, upper=5)
             b = pm.Uniform("b", lower=-5, upper=5)
-            sd = pm.HalfNormal("sd", lower=0, upper=20)
+            sd = pm.HalfNormal("sd", sd=20)
 
             # Define the likelihood. A few comments:
             #  1. For mathematical operations like "exp", you can't use
@@ -56,7 +56,7 @@ class GenerateDataAndFitModel:
             #     argument to any distribution. In this case, we want to
             #     use the "Normal" distribution (look up the docs for
             #     this).
-            pm.Normal("obs", mu=m * x + b, sd=sd, observed=y)
+            fittedCurve=pm.Normal("obs", mu=m * x + b, sd=sd, observed=y)
 
             # This is how you will sample the model. Take a look at the
             # docs to see that other parameters that are available.
@@ -64,6 +64,7 @@ class GenerateDataAndFitModel:
                 draws=1000, tune=1000, chains=2, cores=2, return_inferencedata=True
             )
             az.plot_trace(trace,var_names=['m','b','sd'])
+            plt.show()
 
 
 m = GenerateDataAndFitModel()
