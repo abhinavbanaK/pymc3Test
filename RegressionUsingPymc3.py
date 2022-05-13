@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pymc3 as pm
+import pandas as pd
 import arviz as az
+import bambi as bmb
+from pymc3 import HalfCauchy, Model, Normal, glm, plot_posterior_predictive_glm, sample
 
 
 class GenerateDataAndFitModel:
@@ -10,23 +13,37 @@ class GenerateDataAndFitModel:
         self.true_m = 0.5
         self.true_b = -1.3
         self.true_logs = np.log(0.3)
+        self.data = None
 
 
     def generateData(self):
         x = np.sort(np.random.uniform(0, 5, 50))
-        y = self.true_b + self.true_m * x + np.exp(self.true_logs) * np.random.randn(len(x))
+        self.regression_line = self.true_b + self.true_m * x
+        y = self.regression_line + np.exp(self.true_logs) * np.random.randn(len(x))
+        self.data = pd.DataFrame(dict(x=x, y=y))
+
         return [x,y]
 
-    def plotData(self, x,y):
-        plt.plot(x,y, ".k")
-        plt.ylim(-2, 2)
+    def plotData(self, x,y,trace):
+        az.plot_trace(trace,figsize=(10,7))
+        plt.show()
+        plt.figure(figsize=(7, 7))
+        plt.plot(x, y, "x", label="data")
+        plot_posterior_predictive_glm(trace,samples=100,label="posterior predictive regression lines")
+        plt.plot(x,self.regression_line,label="True Regression Line", lw=3.0, c="y")
+        plt.title("Posterior predictive regression lines")
+        plt.legend(loc=0)
         plt.xlabel("x")
-        plt.ylabel("y")
+        plt.ylabel("y");
+
+        pm.plots.energyplot(trace)
+
+        pm.forestplot(trace)
         plt.show()
 
     def runModel(self):
         x,y=self.generateData()
-        self.plotData(x,y)
+
         self.fitModel(x,y)
 
 
@@ -63,8 +80,10 @@ class GenerateDataAndFitModel:
             trace = pm.sample(
                 draws=1000, tune=1000, chains=2, cores=2, return_inferencedata=True
             )
-            az.plot_trace(trace,var_names=['m','b','sd'])
-            plt.show()
+        model = bmb.Model("y ~ x", self.data)
+        trace = model.fit(draws=3000)
+        self.plotData(x,y,trace)
+
 
 
 m = GenerateDataAndFitModel()
